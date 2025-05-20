@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Timmer</title>
+  <style>
+  /* Dark mode friendly body */
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212; /* Dark background */
+    color: #e0e0e0; /* Light gray text */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 480px;
+    width: 90%;
+    margin: 2rem auto;
+    padding: 2rem 2.5rem;
+    background: #1e1e1e; /* Slightly lighter dark background */
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  }
+
+  h1, h2 {
+    text-align: center;
+    font-weight: 600;
+    color: #fafafa;
+    margin-bottom: 1rem;
+    user-select: none;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  /* Inputs, selects, buttons */
+  input, select, button {
+    width: 100%;
+    padding: 12px 15px;
+    margin: 10px 0 18px;
+    border: 1.8px solid #444; /* Darker border */
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+    outline-offset: 2px;
+    outline-color: transparent;
+    background-color: #2a2a2a; /* Dark input background */
+    color: #e0e0e0;
+  }
+
+  input::placeholder, select option {
+    color: #888;
+  }
+
+  input:focus, select:focus {
+    border-color: #4f83cc; /* Muted blue focus */
+    outline-color: #4f83cc;
+    background-color: #333842; /* Slight highlight on focus */
+  }
+
+  button {
+    background-color: #4f83cc; /* Calm blue button */
+    border: none;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(79, 131, 204, 0.7);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  button:hover {
+    background-color: #3a62a1;
+    box-shadow: 0 6px 14px rgba(58, 98, 161, 0.9);
+  }
+
+  .subject-list div {
+    padding: 8px 12px;
+    background: #333842; /* Dark muted blue-gray */
+    border-radius: 6px;
+    margin: 6px 0;
+    font-weight: 500;
+    color: #d0d7e6; /* Light grayish blue */
+  }
+
+  .user-status {
+    background: #272b33; /* Darker background */
+    padding: 15px 20px;
+    margin-top: 24px;
+    border-radius: 12px;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.4);
+    font-size: 0.95rem;
+    color: #abb2bf; /* Soft gray */
+  }
+
+  .user-status h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #e1e4ea;
+    font-weight: 600;
+  }
+
+  /* Responsive */
+  @media (max-width: 520px) {
+    .container {
+      padding: 1.5rem 1.5rem;
+      width: 95%;
+      margin: 1.5rem auto;
+    }
+    input, select, button {
+      font-size: 0.95rem;
+    }
+  }
+</style>
+
+
+</head>
+<body>
+  <div class="container">
+    <h1>Study Tracker</h1>
+    
+    <div id="register">
+      <input type="text" id="name" placeholder="Enter your name" />
+      <select id="class">
+        <option value="">Select Class</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+      </select>
+      <select id="stream" class="hidden">
+        <option value="">Select Stream</option>
+        <option value="Arts">Arts</option>
+        <option value="Commerce">Commerce</option>
+        <option value="Science-Bio">Science-Bio</option>
+        <option value="Science-Maths">Science-Maths</option>
+      </select>
+      <button onclick="registerUser()">Register</button>
+    </div>
+
+    <div id="panel" class="hidden">
+      <h2 id="welcome"></h2>
+      <input type="text" id="subjectInput" placeholder="Add Subject" />
+      <button onclick="addSubject()">Add Subject</button>
+      <div class="subject-list" id="subjectList"></div>
+      <select id="subjectSelect"></select>
+      <button onclick="startStudy()">Start Study</button>
+      <button onclick="takeBreak()">Take Break</button>
+      <div class="user-status" id="userStatus"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA86jIwVtymcoiBZ0GakX0FcXUXVC0k9SY",
+      authDomain: "study-a1d2b.firebaseapp.com",
+      databaseURL: "https://study-a1d2b-default-rtdb.firebaseio.com",
+      projectId: "study-a1d2b",
+      storageBucket: "study-a1d2b.appspot.com",
+      messagingSenderId: "853854902837",
+      appId: "1:853854902837:web:e43c552b1e5e12b3ebef7c",
+      measurementId: "G-7F99WKK106"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let userName = localStorage.getItem("name") || "";
+    let userClass = localStorage.getItem("class") || "";
+    let userStream = localStorage.getItem("stream") || "";
+
+    function updateUI() {
+      if (userName) {
+        document.getElementById("register").classList.add("hidden");
+        document.getElementById("panel").classList.remove("hidden");
+        document.getElementById("welcome").innerText = `Welcome, ${userName}`;
+        loadSubjects();
+        showStatuses();
+      } else {
+        document.getElementById("stream").classList.add("hidden");
+      }
+    }
+
+    document.getElementById("class").addEventListener("change", function() {
+      if (this.value) {
+        document.getElementById("stream").classList.remove("hidden");
+      }
+    });
+
+    window.registerUser = () => {
+      const name = document.getElementById("name").value;
+      const cls = document.getElementById("class").value;
+      const stream = document.getElementById("stream").value;
+      if (name && cls && stream) {
+        localStorage.setItem("name", name);
+        localStorage.setItem("class", cls);
+        localStorage.setItem("stream", stream);
+        userName = name;
+        updateUI();
+      } else {
+        alert("Please fill all details!");
+      }
+    }
+
+    window.addSubject = () => {
+      const subject = document.getElementById("subjectInput").value;
+      if (subject) {
+        const subjectsRef = ref(db, "users/" + userName + "/subjects/" + subject);
+        set(subjectsRef, true);
+        document.getElementById("subjectInput").value = "";
+        loadSubjects();
+      }
+    }
+
+    function loadSubjects() {
+      const subjectsRef = ref(db, "users/" + userName + "/subjects");
+      onValue(subjectsRef, (snapshot) => {
+        const data = snapshot.val();
+        const subjectList = document.getElementById("subjectList");
+        const subjectSelect = document.getElementById("subjectSelect");
+        subjectList.innerHTML = "";
+        subjectSelect.innerHTML = "<option value=''>Select Subject</option>";
+        if (data) {
+          Object.keys(data).forEach(sub => {
+            subjectList.innerHTML += `<div>${sub}</div>`;
+            subjectSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
+          });
+        }
+      });
+    }
+
+    window.startStudy = () => {
+      const selected = document.getElementById("subjectSelect").value;
+      if (selected) {
+        const statusRef = ref(db, "users/" + userName + "/status");
+        const now = new Date().toLocaleTimeString();
+        set(statusRef, {
+          subject: selected,
+          status: "studying",
+          time: now
+        });
+      }
+    }
+
+    window.takeBreak = () => {
+      const statusRef = ref(db, "users/" + userName + "/status");
+      const now = new Date().toLocaleTimeString();
+      set(statusRef, {
+        subject: "None",
+        status: "on break",
+        time: now
+      });
+    }
+
+    function showStatuses() {
+  const usersRef = ref(db, "users");
+  onValue(usersRef, (snapshot) => {
+    const data = snapshot.val();
+    const userStatus = document.getElementById("userStatus");
+    userStatus.innerHTML = "<h3>Live Status</h3>";
+    for (let user in data) {
+      if (data[user].status) {
+        const { subject, status, time } = data[user].status;
+        let statusText = "";
+        if (status === "studying" && subject !== "None") {
+          statusText = `${user} is studying <strong>${subject}</strong> since ${time}`;
+        } else if (status === "on break") {
+          statusText = `${user} is taking a break since ${time}`;
+        } else {
+          statusText = `${user} is ${status} since ${time}`;
+        }
+        userStatus.innerHTML += `<p>${statusText}</p>`;
+      }
+    }
+  });
+}
+
+
+    updateUI();
+  </script>
+</body>
+</html>
